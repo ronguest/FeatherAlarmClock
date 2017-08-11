@@ -1,5 +1,5 @@
-#include <Arduino.h>
-
+//
+//   Copyright (C) 2017 Ronald Guest <http://about.me/ronguest>
 //
 //  This is based on a Feather Huzzah, Adafruit Sound Board, and MAX98306 Stereo amp. Audio file is stored on the Sound Board.
 //  Simply plug the board into my computer when the Feather is not powered up.
@@ -8,6 +8,7 @@
 //  Alarm time of 9999 means to continuously sound the alarm
 //
 
+#include <Arduino.h>
 #include "Clock.h"
 
 void setup() {
