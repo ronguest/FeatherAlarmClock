@@ -2,5 +2,5 @@
 .piolibdeps
 .clang_complete
 .gcc-flags.json
-alarm_setup-ashley.h
-alarm_setup-connor.h
+todo.txt
+alarm_setup.h
