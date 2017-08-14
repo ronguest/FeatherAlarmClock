@@ -22,6 +22,7 @@ void setup() {
   pinMode(buttonPIN, INPUT_PULLUP);
   debouncer.attach(buttonPIN);
   debouncer.interval(20);
+  pinMode(secondAlarmPin, INPUT_PULLUP);  // No debounce since never changes
 
   // Set up the display.
   clockDisplay.begin(DISPLAY_ADDRESS);
@@ -50,6 +51,18 @@ void setup() {
   // Start up with alarm disabled: hour and minute set to 00 means never sound the alarm
   alarmMinute = 0;
   alarmHour = 0;
+
+while (1) {
+  if (digitalRead(secondAlarmPin) == HIGH) {
+    Serial.println("Second alarm pin is high");
+    alarmURL = alarm1URL;
+  } else {
+    Serial.println("Second alarm pin is low");
+    alarmURL = alarm2URL;
+  }
+  delay(1000);
+}
+
 }
 
 void loop() {
@@ -70,7 +83,7 @@ void loop() {
     startUp = false;
     previousHour = hours;
     getAlarmTime(alarmURL);
-    Serial.print("Alarm time set to: ");
+    Serial.print("Alarm time from URL is: ");
     Serial.print(alarmHour);Serial.print(alarmMinute);Serial.println();
     // Try an NTP time sync
     ntpTime = getNtpTime();

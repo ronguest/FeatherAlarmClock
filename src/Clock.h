@@ -20,6 +20,14 @@
 
 int alarmPIN = 13;          // Take low to turn on sound
 int buttonPIN = 12;         // If pressed turn off the alarm
+int secondAlarmPin = 16;    // Pulled high if this is the first child's alarm or the second
+// Can try 15, 0, 16, 2
+// 0 has no pullup and can be held low at boot time
+// 2 has a pullup but is used to detect boot mode: not sure if this would be high or low for a button usage
+// 15 has a pull DOWN - make sure it is not held high at boot time
+// 16 *might* have a pullup, is used to wake from deep sleep. This might be the best choice but didn't work in my quick timestamp
+
+char* alarmURL;
 
 long alarmDuration = 300000;      // Duration of alarm in milliseconds (5 minutes)
 int alarmCounter;           // Measures how long alarm has been sounding
