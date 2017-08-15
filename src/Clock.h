@@ -15,26 +15,26 @@
 #include <WiFiUdp.h>
 #include <TimeLib.h>
 #include <Timezone.h>
-#include "Bounce2.h"
+//#include "Bounce2.h"
 #include "alarm_setup.h"
 
-int alarmPIN = 13;          // Take low to turn on sound
-int buttonPIN = 12;         // If pressed turn off the alarm
-
+//int alarmPIN = 13;          // Take low to turn on sound
 //*****************
 // Read a file from the SD card to know which alarm this is
 // In fact, the SD card could contain the URL to use to fetch the alarm time
 // See Penultimate for the solution to the PUSHBUTTON using a voltage divider
+//int buttonPIN = 12;         // If pressed turn off the alarm
 
-char* alarmURL;
+String alarmURLFile="AlarmURL.txt";
+String alarmURL;         // Stores contents of AlarmURLFile
 
-long alarmDuration = 300000;      // Duration of alarm in milliseconds (5 minutes)
-int alarmCounter;           // Measures how long alarm has been sounding
+//long alarmDuration = 300000;      // Duration of alarm in milliseconds (5 minutes)
+//int alarmCounter;           // Measures how long alarm has been sounding
 boolean alarmPlaying = false;
 long previousMillis = 0;
 long colonToggleDelay = 500;  // Millis to delay before flashing the colon on the display, 500 = half second
 
-Bounce debouncer = Bounce();
+//Bounce debouncer = Bounce();
 
 #define TIME_24_HOUR    false
 #define DISPLAY_ADDRESS 0x70
@@ -80,3 +80,4 @@ int alarmHour;
 boolean startUp = true;
 void getAlarmTime(char*);
 boolean alarmTime();
+boolean readFile(File f, String& s);

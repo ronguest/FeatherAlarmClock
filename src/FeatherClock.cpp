@@ -19,10 +19,7 @@ void setup() {
   // It will continue to play the sound until the pin goes back high
   pinMode(alarmPIN, OUTPUT);
   digitalWrite(alarmPIN, HIGH);
-  pinMode(buttonPIN, INPUT_PULLUP);
-  debouncer.attach(buttonPIN);
-  debouncer.interval(20);
-  pinMode(secondAlarmPin, INPUT_PULLUP);  // No debounce since never changes
+  //pinMode(buttonPIN, INPUT_PULLUP);
 
   // Set up the display.
   clockDisplay.begin(DISPLAY_ADDRESS);
@@ -45,23 +42,23 @@ void setup() {
   if (ntpTime != 0) {
     setTime(ntpTime);
   } else {
-    Serial.println("Failed to set the initial time");
+    Serial.println(F("Failed to set the initial time"));
   }
 
   // Start up with alarm disabled: hour and minute set to 00 means never sound the alarm
   alarmMinute = 0;
   alarmHour = 0;
 
-while (1) {
-  if (digitalRead(secondAlarmPin) == HIGH) {
-    Serial.println("Second alarm pin is high");
-    alarmURL = alarm1URL;
+  File urlFile = FileSystem.open(alarmURLFile, FILE_READ);
+  if (readFile(urlFile, alarmURL)) {
+    Serial.print(F("alarmURL is: "); Serial.println(alarmURL));
+    urlFile.close();
   } else {
-    Serial.println("Second alarm pin is low");
-    alarmURL = alarm2URL;
+    Serial.println(F("Unable to read alarmURLFile"));
+    // Might as well just loop for now, monkey with display to show error later
+    // Maybe show 66:66 as the time?
+    while (1) {delay(1000);}
   }
-  delay(1000);
-}
 
 }
 
@@ -76,7 +73,7 @@ void loop() {
   int displayValue = hours*100 + minutes;
   unsigned long currentMillis = millis();
 
-  debouncer.update();
+  //debouncer.update();
 
   // At bootup and at the top of every hour read the alarm time
   if ((previousHour != hours) || (startUp)) {
@@ -132,6 +129,12 @@ void loop() {
 
   // If the alarm is sounding, check how long it has been sounding and turn it off if it has been alarmDuration seconds
   // Also stops the alarm if the button is pushed (debounced)
+
+  //********
+  //  Replace digitalWrite with a way to stop a playlist
+  //  Reset the board if necessary
+  //  Also replace the debouncer with a check on the value of the analog input
+  //  Don't need the alarmCounter any more or to check duration
   if (alarmPlaying) {
     alarmCounter++;
     if ((alarmCounter > alarmDuration) || (debouncer.read() == LOW)){
@@ -142,6 +145,7 @@ void loop() {
   }
 
  // We've hit the HH:MM time for the alarm so turn it on, unless it is sounding
+ // ****************** Replace the digitalWrite code the coded needed to sound a play list
   if (alarmTime() && !alarmPlaying) {
     // Start playing the alarm for a fixed amount of time
     Serial.println("Playing alarm");
