@@ -20,20 +20,11 @@
 
 int alarmPIN = 13;          // Take low to turn on sound
 int buttonPIN = 12;         // If pressed turn off the alarm
-int secondAlarmPin = 16;    // Pulled high if this is the first child's alarm or the second
-// Can try 15, 0, 16, 2
-// 0 has no pullup and can be held low at boot time
-// 2 has a pullup but is used to detect boot mode: not sure if this would be high or low for a button usage
-// 15 has a pull DOWN - make sure it is not held high at boot time
-// 16 *might* have a pullup, is used to wake from deep sleep. This might be the best choice but didn't work in my quick timestamp
-/*
-15 = XDCS - this is the VS1053 data select pin
-0 =DREQ - this is the VS1053 data request interrupt pin
-16 = MP3CS - this is the VS1053 chip select pin
-2 = SD CS - this is the SD Card chip select pin
-that's just by matching huzzah pins to music maker pins (see control pins link above)
-and as you've noted, 12, 13, 14 will be needed for SPI; 4 and 5 for for I2C
-*/
+
+//*****************
+// Read a file from the SD card to know which alarm this is
+// In fact, the SD card could contain the URL to use to fetch the alarm time
+// See Penultimate for the solution to the PUSHBUTTON using a voltage divider
 
 char* alarmURL;
 
