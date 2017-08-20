@@ -13,20 +13,25 @@
 
 void setup() {
   Serial.begin(115200);                           // Start the serial console
+  delay(100);
   Serial.println("Clock starting!");              // Start the clock message.
 
   // Configure pin for control alarm sound on the soundboard
   // It will continue to play the sound until the pin goes back high
-  pinMode(alarmPIN, OUTPUT);
-  digitalWrite(alarmPIN, HIGH);
+  //pinMode(alarmPIN, OUTPUT);
+  //digitalWrite(alarmPIN, HIGH);
   //pinMode(buttonPIN, INPUT_PULLUP);
 
   // Set up the display.
   clockDisplay.begin(DISPLAY_ADDRESS);
 
+  clockDisplay.print(1, DEC);
+  clockDisplay.writeDisplay();
   // Tell the module not to advertise itself as an access point
   WiFi.mode(WIFI_STA);
 
+  clockDisplay.print(2, DEC);
+  clockDisplay.writeDisplay();
   // Connect to WiFi access point.
   Serial.print(F("Connecting to ")); Serial.println(ssid);
   WiFi.begin(ssid, pass);
@@ -36,6 +41,8 @@ void setup() {
   }
   Serial.println();
 
+  clockDisplay.print(3, DEC);
+  clockDisplay.writeDisplay();
   // Get current time using NTP
   Udp.begin(localPort);
   ntpTime = getNtpTime();
@@ -49,10 +56,11 @@ void setup() {
   alarmMinute = 0;
   alarmHour = 0;
 
-  File urlFile = FileSystem.open(alarmURLFile, FILE_READ);
-  if (readFile(urlFile, alarmURL)) {
-    Serial.print(F("alarmURL is: "); Serial.println(alarmURL));
-    urlFile.close();
+  clockDisplay.print(4, DEC);
+  clockDisplay.writeDisplay();
+  if (readFile()) {
+    Serial.print(F("alarmURL is: ")); Serial.println(alarmURL);
+    //urlFile.close();
   } else {
     Serial.println(F("Unable to read alarmURLFile"));
     // Might as well just loop for now, monkey with display to show error later
@@ -60,6 +68,40 @@ void setup() {
     while (1) {delay(1000);}
   }
 
+  clockDisplay.print(5, DEC);
+  clockDisplay.writeDisplay();
+  if (! musicPlayer.begin()) { // initialise the music player
+     Serial.println(F("Couldn't find VS1053, do you have the right pins defined?"));
+     while (1) {
+       delay(10);  // we're done! do nothing...
+     }
+  }
+  musicPlayer.setVolume(60,60);
+
+  musicPlayer.sineTest(0x44, 500);    // Make a tone to indicate VS1053 is working
+  if (!SD.begin(CARDCS)) {
+    Serial.println(F("SD failed, or not present"));
+    while (1) {
+      delay(10);  // we're done! do nothing...
+    }
+  }
+  Serial.println("SD OK!");
+  #if defined(__AVR_ATmega32U4__)
+    // Timer interrupts are not suggested, better to use DREQ interrupt!
+    // but we don't have them on the 32u4 feather...
+    musicPlayer.useInterrupt(VS1053_FILEPLAYER_TIMER0_INT); // timer int
+  #elif defined(ESP32)
+    // no IRQ! doesn't work yet :/
+  #else
+    // If DREQ is on an interrupt pin we can do background
+    // audio playing
+    musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
+  #endif
+
+  // Play a file in the background, REQUIRES interrupts!
+  Serial.println(F("Playing full track 001"));
+  //musicPlayer.playFullFile("track001.mp3");
+  musicPlayer.playFullFile("fnaf.wav");
 }
 
 void loop() {
@@ -136,12 +178,12 @@ void loop() {
   //  Also replace the debouncer with a check on the value of the analog input
   //  Don't need the alarmCounter any more or to check duration
   if (alarmPlaying) {
-    alarmCounter++;
+    /*alarmCounter++;
     if ((alarmCounter > alarmDuration) || (debouncer.read() == LOW)){
       // Time is up, turn off the alarm
       alarmPlaying = false;
-      digitalWrite(alarmPIN, HIGH);
-    }
+      //digitalWrite(alarmPIN, HIGH);
+    }*/
   }
 
  // We've hit the HH:MM time for the alarm so turn it on, unless it is sounding
@@ -149,8 +191,8 @@ void loop() {
   if (alarmTime() && !alarmPlaying) {
     // Start playing the alarm for a fixed amount of time
     Serial.println("Playing alarm");
-    digitalWrite(alarmPIN, LOW);
-    alarmCounter = 0;
+    //digitalWrite(alarmPIN, LOW);
+    //alarmCounter = 0;
     alarmPlaying = true;
   }
 
@@ -220,7 +262,7 @@ void sendNTPpacket(IPAddress &address) {
 
 // Connect to the server and read the alarm time
 // 0000 means no alarm
-void getAlarmTime(char* url) {
+void getAlarmTime(String url) {
   HTTPClient http;
   String payload;
 
@@ -262,4 +304,10 @@ boolean alarmTime() {
   } else {
     return false;
   }
+}
+
+// Reads the string value from the specified file
+// Returns true on success -- SD.open("AURL.txt"), alarmURL)
+boolean readFile() {
+  alarmURL = "http://farsidetechnology.com/ashley_alarm.php";
 }
