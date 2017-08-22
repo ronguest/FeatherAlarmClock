@@ -1,7 +1,7 @@
 Feather Alarm Clock
 ========
 
-* This is based on a Feather Huzzah, Adafruit Sound Board, and MAX98306 Stereo amp
+* This is based on a Feather Huzzah, Adafruit Sound Board, and MAX98306 Stereo amp plus a 4 digit 7 segment display wing
 * The audio file is stored on the Sound Board (must be a small file as the storage is small)
 * Simply plug the sound board into a computer when the Feather is not powered up to copy to it as a storage device
 
