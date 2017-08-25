@@ -27,6 +27,8 @@ int buttonPIN = 12;         // If pressed turn off the alarm
 
 String alarmURLFile="AURL.txt";
 String alarmURL;         // Stores contents of AlarmURLFile
+unsigned int alarmHour;
+unsigned int alarmMinute;
 
 //long alarmDuration = 300000;      // Duration of alarm in milliseconds (5 minutes)
 //int alarmCounter;           // Measures how long alarm has been sounding
@@ -75,8 +77,6 @@ bool blinkColon = false;            // Track the status of the colon to blink ev
 
 int status = WL_IDLE_STATUS;        // WINC1500 chip status
 
-int alarmMinute;
-int alarmHour;
 boolean startUp = true;
 void getAlarmTime(String);
 boolean alarmTime();
