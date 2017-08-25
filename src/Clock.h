@@ -11,13 +11,11 @@
 #include <Wire.h>                             // Wire support library
 #include "Adafruit_LEDBackpack.h"             // Support for the LED Backpack FeatherWing
 #include "Adafruit_GFX.h"                     // Adafruit's graphics library
-#include <ESP8266WiFi.h>
-#include <ESP8266WiFiMulti.h>
-#include <ESP8266HTTPClient.h>
+#include <WiFi101.h>
 #include <WiFiUdp.h>
 #include <TimeLib.h>
 #include <Timezone.h>
-//#include "Bounce2.h"
+#include "Bounce2.h"
 #include "alarm_setup.h"
 
 //int alarmPIN = 13;          // Take low to turn on sound
@@ -25,7 +23,7 @@
 // Read a file from the SD card to know which alarm this is
 // In fact, the SD card could contain the URL to use to fetch the alarm time
 // See Penultimate for the solution to the PUSHBUTTON using a voltage divider
-//int buttonPIN = 12;         // If pressed turn off the alarm
+int buttonPIN = 12;         // If pressed turn off the alarm
 
 String alarmURLFile="AURL.txt";
 String alarmURL;         // Stores contents of AlarmURLFile
@@ -36,7 +34,7 @@ boolean alarmPlaying = false;
 long previousMillis = 0;
 long colonToggleDelay = 500;  // Millis to delay before flashing the colon on the display, 500 = half second
 
-//Bounce debouncer = Bounce();
+Bounce debouncer = Bounce();
 
 #define TIME_24_HOUR    false
 #define DISPLAY_ADDRESS 0x70
@@ -55,7 +53,7 @@ time_t local;
 const int NTP_PACKET_SIZE = 48; // NTP time is in the first 48 bytes of message
 byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming & outgoing packets
 int ntpTime;
-// Create an ESP8266 WiFiClient class to connect to the AIO server.
+
 WiFiClient client;
 unsigned int localPort = 8888;  // local port to listen for UDP packets
 time_t getNtpTime();

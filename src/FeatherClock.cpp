@@ -16,22 +16,17 @@ void setup() {
   delay(100);
   Serial.println("Clock starting!");              // Start the clock message.
 
-  // Configure pin for control alarm sound on the soundboard
-  // It will continue to play the sound until the pin goes back high
-  //pinMode(alarmPIN, OUTPUT);
-  //digitalWrite(alarmPIN, HIGH);
-  //pinMode(buttonPIN, INPUT_PULLUP);
+  //Configure pins for Adafruit ATWINC1500 Feather
+  WiFi.setPins(8,7,4,2);
+  debouncer.attach(buttonPIN);
+  debouncer.interval(20);
 
   // Set up the display.
   clockDisplay.begin(DISPLAY_ADDRESS);
 
   clockDisplay.print(1, DEC);
   clockDisplay.writeDisplay();
-  // Tell the module not to advertise itself as an access point
-  WiFi.mode(WIFI_STA);
 
-  clockDisplay.print(2, DEC);
-  clockDisplay.writeDisplay();
   // Connect to WiFi access point.
   Serial.print(F("Connecting to ")); Serial.println(ssid);
   WiFi.begin(ssid, pass);
@@ -41,7 +36,7 @@ void setup() {
   }
   Serial.println();
 
-  clockDisplay.print(3, DEC);
+  clockDisplay.print(2, DEC);
   clockDisplay.writeDisplay();
   // Get current time using NTP
   Udp.begin(localPort);
@@ -56,7 +51,7 @@ void setup() {
   alarmMinute = 0;
   alarmHour = 0;
 
-  clockDisplay.print(4, DEC);
+  clockDisplay.print(3, DEC);
   clockDisplay.writeDisplay();
   if (readFile()) {
     Serial.print(F("alarmURL is: ")); Serial.println(alarmURL);
@@ -68,7 +63,7 @@ void setup() {
     while (1) {delay(1000);}
   }
 
-  clockDisplay.print(5, DEC);
+  clockDisplay.print(4, DEC);
   clockDisplay.writeDisplay();
   if (! musicPlayer.begin()) { // initialise the music player
      Serial.println(F("Couldn't find VS1053, do you have the right pins defined?"));
@@ -77,8 +72,8 @@ void setup() {
      }
   }
   musicPlayer.setVolume(60,60);
-
   musicPlayer.sineTest(0x44, 500);    // Make a tone to indicate VS1053 is working
+
   if (!SD.begin(CARDCS)) {
     Serial.println(F("SD failed, or not present"));
     while (1) {
@@ -101,7 +96,7 @@ void setup() {
   // Play a file in the background, REQUIRES interrupts!
   Serial.println(F("Playing full track 001"));
   //musicPlayer.playFullFile("track001.mp3");
-  musicPlayer.playFullFile("fnaf.wav");
+  musicPlayer.playFullFile("T01.wav");
 }
 
 void loop() {
@@ -115,7 +110,7 @@ void loop() {
   int displayValue = hours*100 + minutes;
   unsigned long currentMillis = millis();
 
-  //debouncer.update();
+  debouncer.update();
 
   // At bootup and at the top of every hour read the alarm time
   if ((previousHour != hours) || (startUp)) {
@@ -263,28 +258,69 @@ void sendNTPpacket(IPAddress &address) {
 // Connect to the server and read the alarm time
 // 0000 means no alarm
 void getAlarmTime(String url) {
-  HTTPClient http;
-  String payload;
+  WiFiClient client;
+  const int httpPort = 80;
+  int endServer = -1;   // locates the third slash in the URL
+  int hostStart = -1;   // locates the start of the hostname, after the leading protocol info (e.g. http://)
+  String server;
+  String host;
+  String filePart;      // Holds the part of the URL after the server name
+  String payload;       // string read from the server
 
-   http.begin(url);
-    // start connection and send HTTP header
-    int httpCode = http.GET();
+  url = "http://www.google.com/search?q=arduino";
 
-    // httpCode will be negative on error
-    if(httpCode > 0) {
-        // HTTP header has been send and Server response header has been handled
-        //Serial.printf("[HTTP] GET... code: %d\n", httpCode);
-        // file found at server
-        if(httpCode == HTTP_CODE_OK) {
-            payload = http.getString();
-            //Serial.println(payload);
-            alarmHour = atoi(payload.substring(0,2).c_str());
-            alarmMinute = atoi(payload.substring(2,4).c_str());
-        }
-    } else {
-        Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+  // ASSUMPTION: The third "/" is the end of the server name. There must be a file path after that, e.g. foo.php
+  // This is based on http{s}://server.foo/something.php format
+  endServer = url.indexOf('/');                // First /
+  endServer = url.indexOf('/', endServer+1);    // Second /
+  hostStart = endServer;    // So we can skip the protocol to grab just the hostname for the request
+  endServer = url.indexOf('/', endServer+1);    // Third /
+  // At this point we either know the locations of the 3rd slash or endServer = -1 which means we didn't find it
+  if ((endServer == -1) || (hostStart == -1)) {
+    Serial.print("Failed to parse server portion of URL"); Serial.println(url);
+    return;
+  }
+  Serial.print("hostStart = "); Serial.println(hostStart);
+  Serial.print("endServer = "); Serial.println(endServer);
+  server = url.substring(hostStart+1, endServer);
+  host = url.substring(hostStart+1, endServer);
+  filePart = url.substring(endServer+1);
+
+  Serial.print(F("Requesting URL: "));
+  Serial.println(server + '/' + filePart);
+  Serial.print(F("Parsed host name of: ")); Serial.println(host);
+
+  if (!client.connect(server.c_str(), httpPort)) {
+    Serial.println(F("Connection to server failed"));
+    return;
+  }
+
+  // This will send the request to the server
+  client.println(String("GET ") + url + " HTTP/1.1");
+  client.println("Host: " + host);
+  client.println("Connection: close");
+  /*    Retries don't seem to be a normal best practice
+  int retryCounter = 0;
+  while(!client.available()) {
+    delay(1000);
+    retryCounter++;
+    if (retryCounter > 10) {
+      Serial.println(F("Retry timed out"));
+      return;
     }
-    http.end();
+  }*/
+
+  char c;
+  while(client.available()) {
+    c = client.read();
+    Serial.print(c);
+    payload += c;
+  }
+  Serial.println("<end>");
+  client.stop();
+
+  alarmHour = atoi(payload.substring(0,2).c_str());
+  alarmMinute = atoi(payload.substring(2,4).c_str());
 }
 
 boolean alarmTime() {
@@ -309,5 +345,5 @@ boolean alarmTime() {
 // Reads the string value from the specified file
 // Returns true on success -- SD.open("AURL.txt"), alarmURL)
 boolean readFile() {
-  alarmURL = "http://farsidetechnology.com/ashley_alarm.php";
+  alarmURL = "http://www.farsidetechnology.com/ashley_alarm.php";
 }
