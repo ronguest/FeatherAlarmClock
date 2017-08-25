@@ -1,9 +1,8 @@
 Feather Alarm Clock
 ========
 
-* This is based on a Feather Huzzah, Adafruit Sound Board, and MAX98306 Stereo amp
-* The audio file is stored on the Sound Board (must be a small file as the storage is small)
-* Simply plug the sound board into a computer when the Feather is not powered up to copy to it as a storage device
+* This is based on a Feather M0 WINC1500, Adafruit Music Maker Feather Wing and and the 7 segment display wing
+* The audio file is stored on the SD card of the Music Maker
 
 * An alarm time of 0000 is a disabled alarm
 * An alarm time of 9999 means to continuously sound the alarm

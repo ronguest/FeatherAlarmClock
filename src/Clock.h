@@ -12,6 +12,7 @@
 #include "Adafruit_LEDBackpack.h"             // Support for the LED Backpack FeatherWing
 #include "Adafruit_GFX.h"                     // Adafruit's graphics library
 #include <WiFi101.h>
+#include "ArduinoHttpClient.h"
 #include <WiFiUdp.h>
 #include <TimeLib.h>
 #include <Timezone.h>
@@ -27,8 +28,8 @@ int buttonPIN = 12;         // If pressed turn off the alarm
 
 String alarmURLFile="AURL.txt";
 String alarmURL;         // Stores contents of AlarmURLFile
-unsigned int alarmHour;
-unsigned int alarmMinute;
+unsigned int alarmHour = 0;
+unsigned int alarmMinute = 0;
 
 //long alarmDuration = 300000;      // Duration of alarm in milliseconds (5 minutes)
 //int alarmCounter;           // Measures how long alarm has been sounding

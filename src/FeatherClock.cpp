@@ -24,9 +24,6 @@ void setup() {
   // Set up the display.
   clockDisplay.begin(DISPLAY_ADDRESS);
 
-  clockDisplay.print(1, DEC);
-  clockDisplay.writeDisplay();
-
   // Connect to WiFi access point.
   Serial.print(F("Connecting to ")); Serial.println(ssid);
   WiFi.begin(ssid, pass);
@@ -36,8 +33,6 @@ void setup() {
   }
   Serial.println();
 
-  clockDisplay.print(2, DEC);
-  clockDisplay.writeDisplay();
   // Get current time using NTP
   Udp.begin(localPort);
   ntpTime = getNtpTime();
@@ -47,24 +42,17 @@ void setup() {
     Serial.println(F("Failed to set the initial time"));
   }
 
-  // Start up with alarm disabled: hour and minute set to 00 means never sound the alarm
-  alarmMinute = 0;
-  alarmHour = 0;
-
-  clockDisplay.print(3, DEC);
-  clockDisplay.writeDisplay();
   if (readFile()) {
     Serial.print(F("alarmURL is: ")); Serial.println(alarmURL);
-    //urlFile.close();
   } else {
     Serial.println(F("Unable to read alarmURLFile"));
     // Might as well just loop for now, monkey with display to show error later
     // Maybe show 66:66 as the time?
-    while (1) {delay(1000);}
+    clockDisplay.print(9999, DEC);
+    clockDisplay.writeDisplay();
+    while (1) {delay(10);}
   }
 
-  clockDisplay.print(4, DEC);
-  clockDisplay.writeDisplay();
   if (! musicPlayer.begin()) { // initialise the music player
      Serial.println(F("Couldn't find VS1053, do you have the right pins defined?"));
      while (1) {
@@ -81,6 +69,7 @@ void setup() {
     }
   }
   Serial.println("SD OK!");
+
   #if defined(__AVR_ATmega32U4__)
     // Timer interrupts are not suggested, better to use DREQ interrupt!
     // but we don't have them on the 32u4 feather...
@@ -92,11 +81,6 @@ void setup() {
     // audio playing
     musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
   #endif
-
-  // Play a file in the background, REQUIRES interrupts!
-  //Serial.println(F("Playing full track 001"));
-  //musicPlayer.playFullFile("track001.mp3");
-  //musicPlayer.playFullFile("T01.wav");
 }
 
 void loop() {
@@ -117,14 +101,14 @@ void loop() {
     startUp = false;
     previousHour = hours;
     getAlarmTime(alarmURL);
-    Serial.print("Alarm time from URL is: ");
+    Serial.print(F("Alarm time from URL is: "));
     Serial.print(alarmHour);Serial.print(alarmMinute);Serial.println();
     // Try an NTP time sync
     ntpTime = getNtpTime();
     if (ntpTime != 0) {
       setTime(ntpTime);
     } else {
-      Serial.println("NTP sync failed");
+      Serial.println(F("NTP sync failed"));
     }
   }
 
@@ -164,14 +148,6 @@ void loop() {
   // Now push out to the display the new values that were set above.
   clockDisplay.writeDisplay();
 
-  // If the alarm is sounding, check how long it has been sounding and turn it off if it has been alarmDuration seconds
-  // Also stops the alarm if the button is pushed (debounced)
-
-  //********
-  //  Replace digitalWrite with a way to stop a playlist
-  //  Reset the board if necessary
-  //  Also replace the debouncer with a check on the value of the analog input
-  //  Don't need the alarmCounter any more or to check duration
   if (alarmPlaying) {
     /*alarmCounter++;
     if ((alarmCounter > alarmDuration) || (debouncer.read() == LOW)){
@@ -179,23 +155,81 @@ void loop() {
       alarmPlaying = false;
       //digitalWrite(alarmPIN, HIGH);
     }*/
+    if (musicPlayer.stopped()) {
+      Serial.println("Done playing music");
+      alarmPlaying = false;
+    } else if (debouncer.read() == LOW) {
+      alarmPlaying = false;
+      musicPlayer.stopPlaying();
+    }
   }
 
- // We've hit the HH:MM time for the alarm so turn it on, unless it is sounding
+ // If we've hit the HH:MM time for the alarm so turn it on, unless it is sounding
  // ****************** Replace the digitalWrite code the coded needed to sound a play list
   if (alarmTime() && !alarmPlaying) {
     // Start playing the alarm for a fixed amount of time
     Serial.println("Playing alarm");
-    //digitalWrite(alarmPIN, LOW);
     //alarmCounter = 0;
+    musicPlayer.startPlayingFile("fnaf.mp3");
     alarmPlaying = true;
   }
+}
 
-  // Pause for a second for time to elapse.  This value is in milliseconds
-  // so 1000 milliseconds = 1 second.
-  // REPLACE WITH A TIME CHECK SO WE CAN MONITOR A PUSHBUTTON TO SILENCE THE ALARM MANUALLY
-  //delay(1000);
+// Connect to the server and read the alarm time
+// 0000 means no alarm
+void getAlarmTime(String url) {
+  WiFiClient client;
+  const int httpPort = 80;
+  String server;
+  String filePart;      // Holds the part of the URL after the server name
+  String response;
 
+  server = url.substring(0, url.indexOf('/'));
+  filePart = url.substring(url.indexOf('/'));
+  Serial.print("Server: " + server);
+  Serial.println(", Filepart: " + filePart);
+
+  HttpClient http = HttpClient(client, server, httpPort);
+  http.get(filePart);
+
+  // read the status code and body of the response
+  Serial.print("statusCode: "); Serial.println(http.responseStatusCode());
+  response = http.responseBody();
+  //Serial.print("response length: "); Serial.println(response.length());
+  Serial.print("response: "); Serial.println(response);
+
+  //Serial.print("toInt of response: "); Serial.println(response.toInt());
+  String hour = response.substring(0,2);
+  String minute = response.substring(2,4);
+
+  Serial.print("Alarm hour: "); Serial.println(atoi(hour.c_str()));
+  Serial.print("Alarm minute: "); Serial.println(atoi(minute.c_str()));
+  alarmHour = atoi(hour.c_str());
+  alarmMinute = atoi(minute.c_str());
+}
+
+boolean alarmTime() {
+  // Sound continuously if debugging
+  if ((alarmHour == 99) && (alarmMinute == 99)) return true;
+
+  // Never sound if the alarm is set for 00:00 (which is midnight...)
+  if ((alarmHour == 0) && (alarmMinute == 0)) return false;
+
+  // Never sound on the Saturday & Sunday
+  if ((dayOfWeek == 1) || (dayOfWeek == 7)) return false;
+
+  // We check the seconds so that if the user hits the silence button quickly the alarm doesn't turn on again
+  if ((hours == alarmHour) && (minutes == alarmMinute) && (seconds < 5)) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// Reads the string value from the specified file
+// Returns true on success -- SD.open("AURL.txt"), alarmURL)
+boolean readFile() {
+  alarmURL = "www.farsidetechnology.com/ashley_alarm.php";
 }
 
 time_t getNtpTime() {
@@ -253,29 +287,4 @@ void sendNTPpacket(IPAddress &address) {
   result = Udp.beginPacket(address, 123); //NTP requests are to port 123
   result = Udp.write(packetBuffer, NTP_PACKET_SIZE);
   result = Udp.endPacket();
-}
-
-boolean alarmTime() {
-
-  // Sound continuously if debugging
-  if ((alarmHour == 99) && (alarmMinute == 99)) return true;
-
-  // Never sound if the alarm is set for 00:00 (which is midnight...)
-  if ((alarmHour == 0) && (alarmMinute == 0)) return false;
-
-  // Never sound on the Saturday & Sunday
-  if ((dayOfWeek == 1) || (dayOfWeek == 7)) return false;
-
-  // We check the seconds so that if the user hits the silence button quickly the alarm doesn't turn on again
-  if ((hours == alarmHour) && (minutes == alarmMinute) && (seconds < 5)) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
-// Reads the string value from the specified file
-// Returns true on success -- SD.open("AURL.txt"), alarmURL)
-boolean readFile() {
-  alarmURL = "www.farsidetechnology.com/ashley_alarm.php";
 }
