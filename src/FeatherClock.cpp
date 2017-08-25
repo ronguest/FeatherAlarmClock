@@ -94,9 +94,9 @@ void setup() {
   #endif
 
   // Play a file in the background, REQUIRES interrupts!
-  Serial.println(F("Playing full track 001"));
+  //Serial.println(F("Playing full track 001"));
   //musicPlayer.playFullFile("track001.mp3");
-  musicPlayer.playFullFile("T01.wav");
+  //musicPlayer.playFullFile("T01.wav");
 }
 
 void loop() {
@@ -267,11 +267,10 @@ void getAlarmTime(String url) {
   String filePart;      // Holds the part of the URL after the server name
   String payload;       // string read from the server
 
-  url = "http://www.google.com/search?q=arduino";
 
   // ASSUMPTION: The third "/" is the end of the server name. There must be a file path after that, e.g. foo.php
   // This is based on http{s}://server.foo/something.php format
-  endServer = url.indexOf('/');                // First /
+  /*endServer = url.indexOf('/');                // First /
   endServer = url.indexOf('/', endServer+1);    // Second /
   hostStart = endServer;    // So we can skip the protocol to grab just the hostname for the request
   endServer = url.indexOf('/', endServer+1);    // Third /
@@ -284,43 +283,45 @@ void getAlarmTime(String url) {
   Serial.print("endServer = "); Serial.println(endServer);
   server = url.substring(hostStart+1, endServer);
   host = url.substring(hostStart+1, endServer);
-  filePart = url.substring(endServer+1);
+  filePart = url.substring(endServer+1);*/
 
-  Serial.print(F("Requesting URL: "));
-  Serial.println(server + '/' + filePart);
-  Serial.print(F("Parsed host name of: ")); Serial.println(host);
+  //url = "www.arduino.cc/latest.txt";
 
-  if (!client.connect(server.c_str(), httpPort)) {
-    Serial.println(F("Connection to server failed"));
-    return;
-  }
+  server = url.substring(0, url.indexOf('/'));
+  filePart = url.substring(url.indexOf('/'));
 
-  // This will send the request to the server
-  client.println(String("GET ") + url + " HTTP/1.1");
-  client.println("Host: " + host);
-  client.println("Connection: close");
-  /*    Retries don't seem to be a normal best practice
-  int retryCounter = 0;
-  while(!client.available()) {
-    delay(1000);
-    retryCounter++;
-    if (retryCounter > 10) {
-      Serial.println(F("Retry timed out"));
-      return;
+  Serial.print("Server: " + server);
+  Serial.println(", Filepart: " + filePart);
+  //Serial.print(F("Parsed host name of: ")); Serial.println(host);
+
+  //char server2[] = "www.arduino.cc";
+  if (client.connect(server.c_str(), 80)) {
+    Serial.println(F("Connected to server"));
+    client.println("GET " + filePart + " HTTP/1.1");
+    client.println("Host: " + server);
+    client.println("User-Agent: ArduinoWiFi/1.1");
+    client.println("Connection: close");
+    client.println();
+
+    char c;
+    Serial.println("Wait for client data");
+    while (!client.available()) {
+      //char c = client.read();
+      //Serial.write(c);
     }
-  }*/
+    while(client.available()) {
+      c = client.read();
+      Serial.write(c);
+      payload += c;
+    }
+    Serial.println("<end>");
+    client.stop();
 
-  char c;
-  while(client.available()) {
-    c = client.read();
-    Serial.print(c);
-    payload += c;
+    alarmHour = atoi(payload.substring(0,2).c_str());
+    alarmMinute = atoi(payload.substring(2,4).c_str());
+  } else {
+    Serial.println("Failed to connect to server");
   }
-  Serial.println("<end>");
-  client.stop();
-
-  alarmHour = atoi(payload.substring(0,2).c_str());
-  alarmMinute = atoi(payload.substring(2,4).c_str());
 }
 
 boolean alarmTime() {
@@ -345,5 +346,5 @@ boolean alarmTime() {
 // Reads the string value from the specified file
 // Returns true on success -- SD.open("AURL.txt"), alarmURL)
 boolean readFile() {
-  alarmURL = "http://www.farsidetechnology.com/ashley_alarm.php";
+  alarmURL = "www.farsidetechnology.com/ashley_alarm.php";
 }
