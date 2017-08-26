@@ -149,7 +149,7 @@ void loop() {
   clockDisplay.writeDisplay();
 
   if (alarmPlaying) {
-    if (((millis() - alarmStart) > alarmDuration) || (debouncer.read() == LOW)) {
+    if (((currentMillis - alarmStart) > alarmDuration) || (debouncer.read() == LOW)) {
       // Alarm has been on long enough or user pushed the button so stop the audio
       Serial.println("Stop alarm playing: either duration or button press");
       alarmPlaying = false;
@@ -169,7 +169,7 @@ void loop() {
   if (alarmTime() && !alarmPlaying) {
     // Only want to print this message the first time we start playing
     Serial.println("Playing alarm");
-    alarmStart = millis();
+    alarmStart = currentMillis;
     // Start playing the alarm for a fixed amount of time
     musicPlayer.startPlayingFile(alarmSong);
     alarmPlaying = true;
