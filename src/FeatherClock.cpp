@@ -157,10 +157,8 @@ void loop() {
     } else if (musicPlayer.stopped()) {
       // We finished playing the song but the user has not yet hit the button/woken up
       // Play an alert?
-      Serial.println("Play the music again since user is not up yet and time has not expired");
-      musicPlayer.startPlayingFile(alarmSong);
-      //Serial.println("Song we played was: " + musicPlayer.currentTrack);
-      //alarmPlaying = false;
+      Serial.println("Play the alert sound since user is not up yet and time has not expired");
+      musicPlayer.startPlayingFile(alarmAlert);
     }
   }
 
