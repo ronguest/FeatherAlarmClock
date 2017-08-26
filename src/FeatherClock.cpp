@@ -1,9 +1,6 @@
 //
 //   Copyright (C) 2017 Ronald Guest <http://about.me/ronguest>
 //
-//  This is based on a Feather Huzzah, Adafruit Sound Board, and MAX98306 Stereo amp. Audio file is stored on the Sound Board.
-//  Simply plug the board into my computer when the Feather is not powered up.
-//
 //  Alarm time of 0000 is a disabled alarm
 //  Alarm time of 9999 means to continuously sound the alarm
 //
@@ -42,6 +39,26 @@ void setup() {
     Serial.println(F("Failed to set the initial time"));
   }
 
+  if (! musicPlayer.begin()) { // initialise the music player
+     Serial.println(F("Couldn't find VS1053, do you have the right pins defined?"));
+     while (1) {
+       delay(10);  // we're done! do nothing...
+     }
+  }
+  musicPlayer.setVolume(60,60);       // Would be nice to have a volume setting option
+  musicPlayer.sineTest(0x44, 500);    // Make a tone to indicate VS1053 is working
+
+  if (!SD.begin(CARDCS)) {
+    Serial.println(F("SD failed, or not present"));
+    while (1) {
+      delay(10);  // we're done! do nothing...
+    }
+  }
+  Serial.println("SD OK!");
+
+  // Get the URL to the alarm time.
+  // NOTE: doesn't seem to be working, fails to read from the SD card !?!?
+  // NOTE: Ohhhh. I originally had this code BEFORE initializing the SD card. D'oh!
   if (readFile()) {
     Serial.print(F("alarmURL is: ")); Serial.println(alarmURL);
   } else {
@@ -52,23 +69,6 @@ void setup() {
     clockDisplay.writeDisplay();
     while (1) {delay(10);}
   }
-
-  if (! musicPlayer.begin()) { // initialise the music player
-     Serial.println(F("Couldn't find VS1053, do you have the right pins defined?"));
-     while (1) {
-       delay(10);  // we're done! do nothing...
-     }
-  }
-  musicPlayer.setVolume(60,60);
-  musicPlayer.sineTest(0x44, 500);    // Make a tone to indicate VS1053 is working
-
-  if (!SD.begin(CARDCS)) {
-    Serial.println(F("SD failed, or not present"));
-    while (1) {
-      delay(10);  // we're done! do nothing...
-    }
-  }
-  Serial.println("SD OK!");
 
   #if defined(__AVR_ATmega32U4__)
     // Timer interrupts are not suggested, better to use DREQ interrupt!
@@ -157,6 +157,7 @@ void loop() {
     }*/
     if (musicPlayer.stopped()) {
       Serial.println("Done playing music");
+      Serial.println("Song we played was: " + musicPlayer.currentTrack);
       alarmPlaying = false;
     } else if (debouncer.read() == LOW) {
       alarmPlaying = false;
@@ -170,7 +171,7 @@ void loop() {
     // Start playing the alarm for a fixed amount of time
     Serial.println("Playing alarm");
     //alarmCounter = 0;
-    musicPlayer.startPlayingFile("fnaf.mp3");
+    musicPlayer.startPlayingFile(alarmSong);
     alarmPlaying = true;
   }
 }
@@ -229,7 +230,24 @@ boolean alarmTime() {
 // Reads the string value from the specified file
 // Returns true on success -- SD.open("AURL.txt"), alarmURL)
 boolean readFile() {
-  alarmURL = "www.farsidetechnology.com/ashley_alarm.php";
+  //alarmURL = "www.farsidetechnology.com/ashley_alarm.php";
+  File dataFile = SD.open("AURL.txt", FILE_READ);
+  if (dataFile) {
+    Serial.println(F("Reading AURL.txt"));
+    while (dataFile.available()) {
+      char c = dataFile.read();
+      if (c == '\n') {
+        break;
+      } else {
+        alarmURL += c;
+      }
+    }
+    dataFile.close();
+    return true;
+  } else {
+    Serial.print(F("Failed to open AURL.txt"));
+    return false;
+  }
 }
 
 time_t getNtpTime() {

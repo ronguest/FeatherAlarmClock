@@ -28,6 +28,8 @@ int buttonPIN = 12;         // If pressed turn off the alarm
 
 String alarmURLFile="AURL.txt";
 String alarmURL;         // Stores contents of AlarmURLFile
+char* alarmSong = "alarm.mp3";      // musicPlayer doesn't accept String types
+char* alarmAlert = "alert.mp3";
 unsigned int alarmHour = 0;
 unsigned int alarmMinute = 0;
 
