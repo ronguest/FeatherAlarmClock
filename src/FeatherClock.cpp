@@ -15,6 +15,8 @@ void setup() {
 
   //Configure pins for Adafruit ATWINC1500 Feather
   WiFi.setPins(8,7,4,2);
+
+  // Set up debouncer library for the alarm off button
   debouncer.attach(buttonPIN);
   debouncer.interval(20);
 
@@ -39,6 +41,7 @@ void setup() {
     Serial.println(F("Failed to set the initial time"));
   }
 
+  // Initialize the Music Maker wing library
   if (! musicPlayer.begin()) { // initialise the music player
      Serial.println(F("Couldn't find VS1053, do you have the right pins defined?"));
      while (1) {
@@ -47,29 +50,6 @@ void setup() {
   }
   musicPlayer.setVolume(60,60);       // Would be nice to have a volume setting option
   musicPlayer.sineTest(0x44, 500);    // Make a tone to indicate VS1053 is working
-
-  if (!SD.begin(CARDCS)) {
-    Serial.println(F("SD failed, or not present"));
-    while (1) {
-      delay(10);  // we're done! do nothing...
-    }
-  }
-  Serial.println("SD OK!");
-
-  // Get the URL to the alarm time.
-  // NOTE: doesn't seem to be working, fails to read from the SD card !?!?
-  // NOTE: Ohhhh. I originally had this code BEFORE initializing the SD card. D'oh!
-  if (readFile()) {
-    Serial.print(F("alarmURL is: ")); Serial.println(alarmURL);
-  } else {
-    Serial.println(F("Unable to read alarmURLFile"));
-    // Might as well just loop for now, monkey with display to show error later
-    // Maybe show 66:66 as the time?
-    clockDisplay.print(9999, DEC);
-    clockDisplay.writeDisplay();
-    while (1) {delay(10);}
-  }
-
   #if defined(__AVR_ATmega32U4__)
     // Timer interrupts are not suggested, better to use DREQ interrupt!
     // but we don't have them on the 32u4 feather...
@@ -81,6 +61,26 @@ void setup() {
     // audio playing
     musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
   #endif
+
+  // Initialize the SD card
+  if (!SD.begin(CARDCS)) {
+    Serial.println(F("SD failed, or not present"));
+    while (1) {
+      delay(10);  // we're done! do nothing...
+    }
+  }
+  Serial.println("SD OK!");
+
+  // Get the URL to the alarm time
+  if (readFile()) {
+    Serial.print(F("alarmURL is: ")); Serial.println(alarmURL);
+  } else {
+    Serial.println(F("Unable to read alarmURLFile"));
+    // Might as well just loop for now, monkey with display to show error
+    clockDisplay.print(9999, DEC);
+    clockDisplay.writeDisplay();
+    while (1) {delay(10);}
+  }
 }
 
 void loop() {
@@ -149,35 +149,34 @@ void loop() {
   clockDisplay.writeDisplay();
 
   if (alarmPlaying) {
-    /*alarmCounter++;
-    if ((alarmCounter > alarmDuration) || (debouncer.read() == LOW)){
-      // Time is up, turn off the alarm
-      alarmPlaying = false;
-      //digitalWrite(alarmPIN, HIGH);
-    }*/
-    if (musicPlayer.stopped()) {
-      Serial.println("Done playing music");
-      Serial.println("Song we played was: " + musicPlayer.currentTrack);
-      alarmPlaying = false;
-    } else if (debouncer.read() == LOW) {
+    if (((millis() - alarmStart) > alarmDuration) || (debouncer.read() == LOW)) {
+      // Alarm has been on long enough or user pushed the button so stop the audio
+      Serial.println("Stop alarm playing: either duration or button press");
       alarmPlaying = false;
       musicPlayer.stopPlaying();
+    } else if (musicPlayer.stopped()) {
+      // We finished playing the song but the user has not yet hit the button/woken up
+      // Play an alert?
+      Serial.println("Play the music again since user is not up yet and time has not expired");
+      musicPlayer.startPlayingFile(alarmSong);
+      //Serial.println("Song we played was: " + musicPlayer.currentTrack);
+      //alarmPlaying = false;
     }
   }
 
  // If we've hit the HH:MM time for the alarm so turn it on, unless it is sounding
  // ****************** Replace the digitalWrite code the coded needed to sound a play list
   if (alarmTime() && !alarmPlaying) {
-    // Start playing the alarm for a fixed amount of time
+    // Only want to print this message the first time we start playing
     Serial.println("Playing alarm");
-    //alarmCounter = 0;
+    alarmStart = millis();
+    // Start playing the alarm for a fixed amount of time
     musicPlayer.startPlayingFile(alarmSong);
     alarmPlaying = true;
   }
 }
 
 // Connect to the server and read the alarm time
-// 0000 means no alarm
 void getAlarmTime(String url) {
   WiFiClient client;
   const int httpPort = 80;
@@ -187,8 +186,8 @@ void getAlarmTime(String url) {
 
   server = url.substring(0, url.indexOf('/'));
   filePart = url.substring(url.indexOf('/'));
-  Serial.print("Server: " + server);
-  Serial.println(", Filepart: " + filePart);
+  //Serial.print("Server: " + server);
+  //Serial.println(", Filepart: " + filePart);
 
   HttpClient http = HttpClient(client, server, httpPort);
   http.get(filePart);
@@ -197,9 +196,8 @@ void getAlarmTime(String url) {
   Serial.print("statusCode: "); Serial.println(http.responseStatusCode());
   response = http.responseBody();
   //Serial.print("response length: "); Serial.println(response.length());
-  Serial.print("response: "); Serial.println(response);
+  //Serial.print("response: "); Serial.println(response);
 
-  //Serial.print("toInt of response: "); Serial.println(response.toInt());
   String hour = response.substring(0,2);
   String minute = response.substring(2,4);
 
@@ -217,10 +215,22 @@ boolean alarmTime() {
   if ((alarmHour == 0) && (alarmMinute == 0)) return false;
 
   // Never sound on the Saturday & Sunday
-  if ((dayOfWeek == 1) || (dayOfWeek == 7)) return false;
+/*  if ((dayOfWeek == 1) || (dayOfWeek == 7)) {
+    // Remind the poor developer that the alarm is off on the weekend...
+    if (minutes != previousMinute) {
+      Serial.println("***** Alarm disabled, it's the weekend");
+      previousMinute = minutes;
+    }
+    return false;
+  }*/
+  if (minutes != previousMinute) {
+    Serial.println("******** Debugging mode: alarm WILL SOUND on the weekend");
+    previousMinute = minutes;
+  }
 
-  // We check the seconds so that if the user hits the silence button quickly the alarm doesn't turn on again
+  // We check the seconds so that if the user hits the silence button within the first minute the alarm doesn't turn on again
   if ((hours == alarmHour) && (minutes == alarmMinute) && (seconds < 5)) {
+    //Serial.println("We hit the alarm time");
     return true;
   } else {
     return false;

@@ -30,14 +30,15 @@ String alarmURLFile="AURL.txt";
 String alarmURL;         // Stores contents of AlarmURLFile
 char* alarmSong = "alarm.mp3";      // musicPlayer doesn't accept String types
 char* alarmAlert = "alert.mp3";
-unsigned int alarmHour = 0;
-unsigned int alarmMinute = 0;
+unsigned long alarmHour = 0;
+unsigned long alarmMinute = 0;
+unsigned long previousMinute = 0;
 
-//long alarmDuration = 300000;      // Duration of alarm in milliseconds (5 minutes)
-//int alarmCounter;           // Measures how long alarm has been sounding
+long alarmDuration = 300000;      // Duration of alarm in milliseconds
+long alarmStart;                 // When did we start playing the alarm, in milliseconds
 boolean alarmPlaying = false;
-long previousMillis = 0;
-long colonToggleDelay = 500;  // Millis to delay before flashing the colon on the display, 500 = half second
+unsigned long previousMillis = 0;
+unsigned long colonToggleDelay = 500;  // Millis to delay before flashing the colon on the display, 500 = half second
 
 Bounce debouncer = Bounce();
 
@@ -69,11 +70,11 @@ WiFiUDP Udp;
 // Create display object
 Adafruit_7segment clockDisplay = Adafruit_7segment();
 
-int hours = 0;                      // Track hours
-int minutes = 0;                    // Track minutes
-int seconds = 0;                    // Track seconds
-int dayOfWeek = 0;                  // Sunday == 1
-int previousHour = 0;
+unsigned int hours = 0;                      // Track hours
+unsigned int minutes = 0;                    // Track minutes
+unsigned int seconds = 0;                    // Track seconds
+unsigned int dayOfWeek = 0;                  // Sunday == 1
+unsigned int previousHour = 0;
 //int tzOffset = -5;                  // Time zone offset
 
 bool blinkColon = false;            // Track the status of the colon to blink every second
