@@ -228,18 +228,18 @@ boolean alarmTime() {
   if ((alarmHour == 0) && (alarmMinute == 0)) return false;
 
   // Never sound on the Saturday & Sunday
-/*  if ((dayOfWeek == 1) || (dayOfWeek == 7)) {
+  if ((dayOfWeek == 1) || (dayOfWeek == 7)) {
     // Remind the poor developer that the alarm is off on the weekend...
     if (minutes != previousMinute) {
       Serial.println("***** Alarm disabled, it's the weekend");
       previousMinute = minutes;
     }
     return false;
-  }*/
-  if (minutes != previousMinute) {
+  }
+  /*if (minutes != previousMinute) {
     Serial.println("******** Debugging mode: alarm WILL SOUND on the weekend");
     previousMinute = minutes;
-  }
+  }*/
 
   // We check the seconds so that if the user hits the silence button within the first minute the alarm doesn't turn on again
   if ((hours == alarmHour) && (minutes == alarmMinute) && (seconds < 5)) {
