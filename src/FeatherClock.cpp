@@ -4,6 +4,7 @@
 //  Alarm time of 0000 is a disabled alarm
 //  Alarm time of 9999 means to continuously sound the alarm
 //
+
 #include <Arduino.h>
 #include "Clock.h"
 
@@ -21,8 +22,6 @@ void setup() {
 
   // Set up the display.
   clockDisplay.begin(DISPLAY_ADDRESS);
-  clockDisplay.print(0, DEC);
-  clockDisplay.writeDisplay();
 
   // Connect to WiFi access point.
   Serial.print(F("Connecting to ")); Serial.println(ssid);
@@ -33,8 +32,6 @@ void setup() {
   }
   Serial.println();
 
-  clockDisplay.print(1, DEC);
-  clockDisplay.writeDisplay();
   // Get current time using NTP
   Udp.begin(localPort);
   ntpTime = getNtpTime();
@@ -44,8 +41,6 @@ void setup() {
     Serial.println(F("Failed to set the initial time"));
   }
 
-  clockDisplay.print(2, DEC);
-  clockDisplay.writeDisplay();
   // Initialize the Music Maker wing library
   if (! musicPlayer.begin()) { // initialise the music player
      Serial.println(F("Couldn't find VS1053, do you have the right pins defined?"));
@@ -53,35 +48,8 @@ void setup() {
        delay(10);  // we're done! do nothing...
      }
   }
+  musicPlayer.setVolume(60,60);       // Would be nice to have a volume setting option
   musicPlayer.sineTest(0x44, 500);    // Make a tone to indicate VS1053 is working
-
-  clockDisplay.print(3, DEC);
-  clockDisplay.writeDisplay();
-  // Initialize the SD card
-  if (!SD.begin(CARDCS)) {
-    Serial.println(F("SD failed, or not present"));
-    while (1) {
-      delay(10);  // we're done! do nothing...
-    }
-  }
-  Serial.println("SD OK!");
-  musicPlayer.setVolume(1,1);       // Would be nice to have a volume setting option
-
-  clockDisplay.print(4, DEC);
-  clockDisplay.writeDisplay();
-  // Get the URL to the alarm time
-  if (readFile()) {
-    Serial.print(F("alarmURL is: ")); Serial.println(alarmURL);
-  } else {
-    Serial.println(F("Unable to read alarmURLFile"));
-    // Might as well just loop for now, monkey with display to show error
-    clockDisplay.print(9999, DEC);
-    clockDisplay.writeDisplay();
-    while (1) {delay(10);}
-  }
-
-  clockDisplay.print(5, DEC);
-  clockDisplay.writeDisplay();
   #if defined(__AVR_ATmega32U4__)
     // Timer interrupts are not suggested, better to use DREQ interrupt!
     // but we don't have them on the 32u4 feather...
@@ -94,10 +62,25 @@ void setup() {
     musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
   #endif
 
-  //Serial.println("*** Just play a song");
-  //musicPlayer.startPlayingFile(alarmSong);
-  clockDisplay.print(6, DEC);
-  clockDisplay.writeDisplay();
+  // Initialize the SD card
+  if (!SD.begin(CARDCS)) {
+    Serial.println(F("SD failed, or not present"));
+    while (1) {
+      delay(10);  // we're done! do nothing...
+    }
+  }
+  Serial.println("SD OK!");
+
+  // Get the URL to the alarm time
+  if (readFile()) {
+    Serial.print(F("alarmURL is: ")); Serial.println(alarmURL);
+  } else {
+    Serial.println(F("Unable to read alarmURLFile"));
+    // Might as well just loop for now, monkey with display to show error
+    clockDisplay.print(9999, DEC);
+    clockDisplay.writeDisplay();
+    while (1) {delay(10);}
+  }
 }
 
 void loop() {
