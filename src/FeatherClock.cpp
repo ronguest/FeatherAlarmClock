@@ -94,8 +94,8 @@ void setup() {
     musicPlayer.useInterrupt(VS1053_FILEPLAYER_PIN_INT);  // DREQ int
   #endif
 
-  Serial.println("*** Just play a song");
-  musicPlayer.startPlayingFile(alarmSong);
+  //Serial.println("*** Just play a song");
+  //musicPlayer.startPlayingFile(alarmSong);
   clockDisplay.print(6, DEC);
   clockDisplay.writeDisplay();
 }
