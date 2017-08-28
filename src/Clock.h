@@ -38,6 +38,8 @@ unsigned long alarmDuration = 300000;      // Duration of alarm in milliseconds
 unsigned long alarmStart;                 // When did we start playing the alarm, in milliseconds
 boolean alarmPlaying = false;
 unsigned long previousMillis = 0;
+unsigned long currentMillis;
+unsigned int displayValue;
 unsigned long colonToggleDelay = 500;  // Millis to delay before flashing the colon on the display, 500 = half second
 
 Bounce debouncer = Bounce();

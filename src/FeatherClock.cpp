@@ -10,7 +10,7 @@
 void setup() {
   Serial.begin(115200);                           // Start the serial console
   delay(100);
-  Serial.println("Clock starting!");              // Start the clock message.
+  Serial.println(F("Clock starting!"));              // Start the clock message.
 
   //Configure pins for Adafruit ATWINC1500 Feather
   WiFi.setPins(8,7,4,2);
@@ -100,25 +100,21 @@ void setup() {
 
 void loop() {
   // Get the time in local timezone taking DST into account
-  time_t local = usCT.toLocal(now(), &tcr);
+  local = usCT.toLocal(now(), &tcr);
   hours = hour(local);
   minutes = minute(local);
   seconds = second(local);
   dayOfWeek = weekday(local);
-  //Serial.print("Weekday is ");Serial.println(dayOfWeek);
-  int displayValue = hours*100 + minutes;
-  unsigned long currentMillis = millis();
+  displayValue = (hours * 100) + minutes;
 
-  debouncer.update();
-
-  // At bootup and at the top of every hour read the alarm time
+  // At bootup and at the top of every hour check the alarm time from the server for changes
   if ((previousHour != hours) || (startUp)) {
     startUp = false;
     previousHour = hours;
     getAlarmTime(alarmURL);
     Serial.print(F("Alarm time from URL is: "));
-    Serial.print(alarmHour);Serial.print(alarmMinute);Serial.println();
-    // Try an NTP time sync
+    Serial.print(alarmHour); Serial.println(alarmMinute);
+    // Try an NTP time sync once an hour, no big deal if it fails occassionally
     ntpTime = getNtpTime();
     if (ntpTime != 0) {
       setTime(ntpTime);
@@ -152,18 +148,21 @@ void loop() {
     }
   }
 
-  // Blink the colon by flipping its value every loop iteration
+  currentMillis = millis();
+  // Toggle the colon by flipping its value every colonToggleDelay ms
   if ((currentMillis - previousMillis) > colonToggleDelay) {
     previousMillis = currentMillis;
     blinkColon = !blinkColon;
   }
-  // We draw the colon on every iteration else it is erased
+  // We have to re-draw the colon on every iteration else it is erased
   clockDisplay.drawColon(blinkColon);
 
   // Now push out to the display the new values that were set above.
   clockDisplay.writeDisplay();
 
   if (alarmPlaying) {
+    // Update the state of the button (debouncer is not interrupt drive so this is polling)
+    debouncer.update();
     if (((currentMillis - alarmStart) > alarmDuration) || (debouncer.read() == LOW)) {
       // Alarm has been on long enough or user pushed the button so stop the audio
       Serial.println("Stop alarm playing: either duration or button press");
@@ -207,6 +206,10 @@ void getAlarmTime(String url) {
 
   // read the status code and body of the response
   Serial.print("statusCode: "); Serial.println(http.responseStatusCode());
+  if (http.responseStatusCode() != 200) {
+    Serial.println("Non-success return code");
+    return;
+  }
   response = http.responseBody();
   //Serial.print("response length: "); Serial.println(response.length());
   //Serial.print("response: "); Serial.println(response);
@@ -242,7 +245,7 @@ boolean alarmTime() {
   }*/
 
   // We check the seconds so that if the user hits the silence button within the first minute the alarm doesn't turn on again
-  if ((hours == alarmHour) && (minutes == alarmMinute) && (seconds < 5)) {
+  if ((hours == alarmHour) && (minutes == alarmMinute) && (seconds < 3)) {
     //Serial.println("We hit the alarm time");
     return true;
   } else {
@@ -275,6 +278,8 @@ boolean readFile() {
 
 time_t getNtpTime() {
   IPAddress ntpServerIP; // NTP server's ip address
+  uint32_t beginWait;
+  int size;
 
   if(WiFi.status() == WL_CONNECTED) {
     while (Udp.parsePacket() > 0) {
@@ -283,13 +288,11 @@ time_t getNtpTime() {
     Serial.print("Transmit NTP Request ");
     // get a random server from the pool
     WiFi.hostByName(ntpServerName, ntpServerIP);
-    Serial.print(ntpServerName);
-    Serial.print(": ");
-    Serial.println(ntpServerIP);
+    Serial.print(ntpServerName); Serial.print(": "); Serial.println(ntpServerIP);
     sendNTPpacket(ntpServerIP);
-    uint32_t beginWait = millis();
+    beginWait = millis();
     while (millis() - beginWait < 1500) { // Extending wait from 1500 to 2-3k seemed to avoid the sync problem, but now it doesn't help
-      int size = Udp.parsePacket();
+      size = Udp.parsePacket();
       if (size >= NTP_PACKET_SIZE) {
         Serial.println("Receive NTP Response");
         Udp.read(packetBuffer, NTP_PACKET_SIZE);  // read packet into the buffer
@@ -310,6 +313,7 @@ time_t getNtpTime() {
 // send an NTP request to the time server at the given address
 void sendNTPpacket(IPAddress &address) {
   int result;
+
   // set all bytes in the buffer to 0
   memset(packetBuffer, 0, NTP_PACKET_SIZE);
   // Initialize values needed to form NTP request
