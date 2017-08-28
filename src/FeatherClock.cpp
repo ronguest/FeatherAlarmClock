@@ -205,8 +205,9 @@ void getAlarmTime(String url) {
   http.get(filePart);
 
   // read the status code and body of the response
-  Serial.print("statusCode: "); Serial.println(http.responseStatusCode());
-  if (http.responseStatusCode() != 200) {
+  int responseCode = http.responseStatusCode();
+  Serial.print("statusCode: "); Serial.println(responseCode);
+  if (responseCode != 200) {
     Serial.println("Non-success return code");
     return;
   }
