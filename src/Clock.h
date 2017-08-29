@@ -25,6 +25,8 @@
 // In fact, the SD card could contain the URL to use to fetch the alarm time
 // See Penultimate for the solution to the PUSHBUTTON using a voltage divider
 int buttonPIN = 12;         // If pressed turn off the alarm
+// Red LED output on the M0 Feather
+const int ledPin = 13;
 
 String alarmURLFile="AURL.txt";
 String alarmURL;         // Stores contents of AlarmURLFile
@@ -34,7 +36,7 @@ unsigned long alarmHour = 0;
 unsigned long alarmMinute = 0;
 unsigned long previousMinute = 0;
 
-unsigned long alarmDuration = 300000;      // Duration of alarm in milliseconds
+unsigned long alarmDuration = 400000;      // Duration of alarm in milliseconds
 unsigned long alarmStart;                 // When did we start playing the alarm, in milliseconds
 boolean alarmPlaying = false;
 unsigned long previousMillis = 0;

@@ -15,6 +15,9 @@ void setup() {
   //Configure pins for Adafruit ATWINC1500 Feather
   WiFi.setPins(8,7,4,2);
 
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+
   // Set up debouncer library for the alarm off button
   debouncer.attach(buttonPIN);
   debouncer.interval(20);
@@ -111,7 +114,7 @@ void loop() {
   if ((previousHour != hours) || (startUp)) {
     startUp = false;
     previousHour = hours;
-    getAlarmTime(alarmURL);
+    getAlarmTime(alarmURL);     // We ignore any errors because we will just use the last fetched time
     Serial.print(F("Alarm time from URL is: "));
     Serial.print(alarmHour); Serial.println(alarmMinute);
     // Try an NTP time sync once an hour, no big deal if it fails occassionally
@@ -209,6 +212,8 @@ void getAlarmTime(String url) {
   Serial.print("statusCode: "); Serial.println(responseCode);
   if (responseCode != 200) {
     Serial.println("Non-success return code");
+    // Light the Red LED if fails
+    digitalWrite(ledPin, HIGH);
     return;
   }
   response = http.responseBody();
@@ -222,6 +227,7 @@ void getAlarmTime(String url) {
   Serial.print("Alarm minute: "); Serial.println(atoi(minute.c_str()));
   alarmHour = atoi(hour.c_str());
   alarmMinute = atoi(minute.c_str());
+  digitalWrite(ledPin, LOW);
 }
 
 boolean alarmTime() {
@@ -246,7 +252,7 @@ boolean alarmTime() {
   }*/
 
   // We check the seconds so that if the user hits the silence button within the first minute the alarm doesn't turn on again
-  if ((hours == alarmHour) && (minutes == alarmMinute) && (seconds < 3)) {
+  if ((hours == alarmHour) && (minutes == alarmMinute) && (seconds < 5)) {
     //Serial.println("We hit the alarm time");
     return true;
   } else {
