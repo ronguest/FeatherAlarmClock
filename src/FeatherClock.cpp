@@ -19,6 +19,7 @@ void setup() {
   digitalWrite(ledPin, LOW);
 
   // Set up debouncer library for the alarm off button
+  pinMode(buttonPIN, INPUT);
   debouncer.attach(buttonPIN);
   debouncer.interval(20);
 
@@ -168,7 +169,11 @@ void loop() {
     debouncer.update();
     if (((currentMillis - alarmStart) > alarmDuration) || (debouncer.read() == LOW)) {
       // Alarm has been on long enough or user pushed the button so stop the audio
-      Serial.println("Stop alarm playing: either duration or button press");
+      if ((currentMillis - alarmStart) > alarmDuration) {
+        Serial.println("Stop alarm playing due to duration");
+      } else {
+        Serial.println("Stop alarm playing due to button press");
+      }
       alarmPlaying = false;
       musicPlayer.stopPlaying();
     } else if (musicPlayer.stopped()) {
