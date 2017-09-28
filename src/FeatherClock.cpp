@@ -111,13 +111,13 @@ void loop() {
   dayOfWeek = weekday(local);
   displayValue = (hours * 100) + minutes;
 
-  // At bootup and at the top of every hour check the alarm time from the server for changes
-  if ((previousHour != hours) || (startUp)) {
+  // At bootup and at 1am check the alarm time from the server for changes
+  if ((hours == 01) || (startUp)) {
     startUp = false;
     previousHour = hours;
     getAlarmTime(alarmURL);     // We ignore any errors because we will just use the last fetched time
-    Serial.print(F("Alarm time from URL is: "));
-    Serial.print(alarmHour); Serial.println(alarmMinute);
+    //Serial.print(F("Alarm time from URL is: "));
+    //Serial.print(alarmHour); Serial.println(alarmMinute);
     // Try an NTP time sync once an hour, no big deal if it fails occassionally
     ntpTime = getNtpTime();
     if (ntpTime != 0) {
@@ -214,7 +214,7 @@ void getAlarmTime(String url) {
 
   // read the status code and body of the response
   int responseCode = http.responseStatusCode();
-  Serial.print("statusCode: "); Serial.println(responseCode);
+  //Serial.print("statusCode: "); Serial.println(responseCode);
   if (responseCode != 200) {
     Serial.println("Non-success return code");
     // Light the Red LED if fails
@@ -228,8 +228,8 @@ void getAlarmTime(String url) {
   String hour = response.substring(0,2);
   String minute = response.substring(2,4);
 
-  Serial.print("Alarm hour: "); Serial.println(atoi(hour.c_str()));
-  Serial.print("Alarm minute: "); Serial.println(atoi(minute.c_str()));
+  //Serial.print("Alarm hour: "); Serial.println(atoi(hour.c_str()));
+  //Serial.print("Alarm minute: "); Serial.println(atoi(minute.c_str()));
   alarmHour = atoi(hour.c_str());
   alarmMinute = atoi(minute.c_str());
   digitalWrite(ledPin, LOW);
@@ -246,7 +246,7 @@ boolean alarmTime() {
   if ((dayOfWeek == 1) || (dayOfWeek == 7)) {
     // Remind the poor developer that the alarm is off on the weekend...
     if (minutes != previousMinute) {
-      Serial.println("***** Alarm disabled, it's the weekend");
+      //Serial.println("***** Alarm disabled, it's the weekend");
       previousMinute = minutes;
     }
     return false;
