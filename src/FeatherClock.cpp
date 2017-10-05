@@ -111,6 +111,12 @@ void loop() {
   dayOfWeek = weekday(local);
   displayValue = (hours * 100) + minutes;
 
+  // Since the alarm clock is currently unstable over a period of days,
+  // try doing a reset/reboot every day - currently set for 7:17pm
+  if ((hours == 19) && (minutes == 17) && (seconds < 2)) {
+    NVIC_SystemReset();
+  }
+
   // At bootup and at 1am check the alarm time from the server for changes
   if ((hours == 01) || (startUp)) {
     startUp = false;
