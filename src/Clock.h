@@ -1,10 +1,6 @@
 
 //   Copyright (C) 2017 Ronald Guest <http://about.me/ronguest>
 
-#ifdef __AVR__
-  #include <avr/power.h>
-#endif
-
 #include <SPI.h>
 #include <SD.h>
 #include <Adafruit_VS1053.h>

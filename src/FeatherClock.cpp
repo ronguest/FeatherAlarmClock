@@ -57,7 +57,10 @@ void setup() {
        delay(10);  // we're done! do nothing...
      }
   }
-  musicPlayer.sineTest(0x44, 500);    // Make a tone to indicate VS1053 is working
+  // ***** Disabling this start up tone as I think this is failing after the software
+  // ***** generated reset. Of course, if this fails the whole things probably will
+  // ***** but let's give it a try
+  //musicPlayer.sineTest(0x44, 500);    // Make a tone to indicate VS1053 is working
 
   clockDisplay.print(3, DEC);
   clockDisplay.writeDisplay();
@@ -111,6 +114,8 @@ void loop() {
   dayOfWeek = weekday(local);
   displayValue = (hours * 100) + minutes;
 
+  // ***** Once every few days this seems to fail -- when the clock reboots it starts
+  // ***** emitting a loud tone which never ends
   // Since the alarm clock is currently unstable over a period of days,
   // try doing a reset/reboot every day - currently set for 7:17pm
   if ((hours == 19) && (minutes == 17) && (seconds < 2)) {
