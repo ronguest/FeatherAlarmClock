@@ -114,12 +114,27 @@ void loop() {
   dayOfWeek = weekday(local);
   displayValue = (hours * 100) + minutes;
 
+  // Daily resets did NOT solve the issue
   // ***** Once every few days this seems to fail -- when the clock reboots it starts
   // ***** emitting a loud tone which never ends
   // Since the alarm clock is currently unstable over a period of days,
-  // try doing a reset/reboot every day - currently set for 7:17pm
-  if ((hours == 19) && (minutes == 17) && (seconds < 2)) {
+  // try doing a reset/reboot every day - currently set for 4:17am
+  /*if ((hours == 04) && (minutes == 17) && (seconds < 2)) {
     NVIC_SystemReset();
+  }*/
+
+  // This is dropping of the network frequently. So let's try getting the NTP time once an hour
+  // to see if that keeps us connected. I think it might be timing out. If this doesn't work, try
+  // the code to reconnect to WiFi
+  // *** I'll leave this code here but it isn't timing out - the how thing was hung
+  if ((minutes == 0) && (seconds == 0)) {
+    // Try an NTP time sync once an hour, no big deal if it fails occassionally
+    ntpTime = getNtpTime();
+    if (ntpTime != 0) {
+      setTime(ntpTime);
+    } else {
+      Serial.println(F("NTP sync failed"));
+    }
   }
 
   // At bootup and at 1am check the alarm time from the server for changes
@@ -129,13 +144,6 @@ void loop() {
     getAlarmTime(alarmURL);     // We ignore any errors because we will just use the last fetched time
     //Serial.print(F("Alarm time from URL is: "));
     //Serial.print(alarmHour); Serial.println(alarmMinute);
-    // Try an NTP time sync once an hour, no big deal if it fails occassionally
-    ntpTime = getNtpTime();
-    if (ntpTime != 0) {
-      setTime(ntpTime);
-    } else {
-      Serial.println(F("NTP sync failed"));
-    }
   }
 
   // Configure for 24 vs 12 hour display value
@@ -229,7 +237,7 @@ void getAlarmTime(String url) {
   if (responseCode != 200) {
     Serial.println("Non-success return code");
     // Light the Red LED if fails
-    digitalWrite(ledPin, HIGH);
+    //digitalWrite(ledPin, HIGH);
     return;
   }
   response = http.responseBody();
@@ -243,7 +251,8 @@ void getAlarmTime(String url) {
   //Serial.print("Alarm minute: "); Serial.println(atoi(minute.c_str()));
   alarmHour = atoi(hour.c_str());
   alarmMinute = atoi(minute.c_str());
-  digitalWrite(ledPin, LOW);
+  //digitalWrite(ledPin, LOW);
+  http.stop();
 }
 
 boolean alarmTime() {
