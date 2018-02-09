@@ -9,7 +9,7 @@
 
 void setup() {
   Serial.begin(115200);                           // Start the serial console
-  delay(100);
+  delay(10000);
   Serial.println(F("Clock starting!"));              // Start the clock message.
 
   //Configure pins for Adafruit ATWINC1500 Feather
@@ -218,6 +218,7 @@ void loop() {
 // Connect to the server and read the alarm time
 void getAlarmTime(String url) {
   WiFiClient client;
+  //const int httpPort = 80;
   const int httpPort = 80;
   String server;
   String filePart;      // Holds the part of the URL after the server name
@@ -225,15 +226,15 @@ void getAlarmTime(String url) {
 
   server = url.substring(0, url.indexOf('/'));
   filePart = url.substring(url.indexOf('/'));
-  //Serial.print("Server: " + server);
-  //Serial.println(", Filepart: " + filePart);
+  Serial.print("Server: " + server);
+  Serial.println(", Filepart: " + filePart);
 
   HttpClient http = HttpClient(client, server, httpPort);
   http.get(filePart);
 
   // read the status code and body of the response
   int responseCode = http.responseStatusCode();
-  //Serial.print("statusCode: "); Serial.println(responseCode);
+  Serial.print("statusCode: "); Serial.println(responseCode);
   if (responseCode != 200) {
     Serial.println("Non-success return code");
     // Light the Red LED if fails
